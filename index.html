@@ -7,13 +7,9 @@
     <title>Jodel Nærhetsvisualisering</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
     <style>
-        #map {
-            height: 400px;
-        }
-
-        .address-input {
-            margin-bottom: 10px;
-        }
+        body, html { margin: 0; padding: 0; height: 100%; }
+        #map { height: calc(100vh - 150px); } /* Adjust the 150px based on actual height of other elements */
+        .address-input { margin-bottom: 10px; }
     </style>
 </head>
 
