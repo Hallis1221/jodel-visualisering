@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="no">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jodel Nærhetsvisualisering</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+    <style>
+        #map {
+            height: 400px;
+        }
+
+        .address-input {
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>Jodel Nærhetsvisualisering</h1>
+
+    <div id="addresses">
+        <div class="address-input">
+            <input type="text" class="address" placeholder="Skriv inn en adresse">
+            <select class="proximity">
+                <option value="1">Her (mindre enn 1 km)</option>
+                <option value="2">Veldig nær (mindre enn 2 km)</option>
+                <option value="10">Nær (mindre enn 10 km)</option>
+                <option value="10+">Langt unna (mer enn 10 km)</option>
+            </select>
+            <button class="remove-address">Fjern</button>
+        </div>
+    </div>
+
+    <button id="addAddress">Legg til en annen adresse</button>
+    <button id="visualize">Visualiser</button>
+
+    <div id="map"></div>
+
+    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+    <script>
+        var map = L.map('map').setView([59.9139, 10.7522], 13); // Sentrert rundt Oslo
+
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19,
+            attribution: '© OpenStreetMap contributors'
+        }).addTo(map);
+
+        document.getElementById('addAddress').addEventListener('click', function () {
+            var newAddressInput = document.querySelector('.address-input').cloneNode(true);
+            document.getElementById('addresses').appendChild(newAddressInput);
+        });
+
+        document.getElementById('addresses').addEventListener('click', function (e) {
+            if (e.target.className === 'remove-address') {
+                e.target.parentNode.remove();
+            }
+        });
+
+        document.getElementById('visualize').addEventListener('click', function () {
+            // Fjern tidligere lag
+            map.eachLayer(function (layer) {
+                if (!!layer.toGeoJSON) {
+                    map.removeLayer(layer);
+                }
+            });
+
+            var addressElements = document.querySelectorAll('.address-input');
+            addressElements.forEach(function (elem) {
+                var address = elem.querySelector('.address').value;
+                var proximity = elem.querySelector('.proximity').value;
+
+                fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address)}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.length > 0) {
+                            var lat = parseFloat(data[0].lat);
+                            var lon = parseFloat(data[0].lon);
+
+                            drawProximityCircles(lat, lon, proximity);
+                        }
+                    })
+                    .catch(error => console.log('Error:', error));
+            });
+        });
+
+        function drawProximityCircles(lat, lon, proximity) {
+            var radius = getRadiusForProximity(proximity);
+            L.circle([lat, lon], { radius: radius, color: 'green', fillOpacity: 0.3 }).addTo(map);
+
+            // Tegn utelukkelsessoner
+            if (proximity === '2') {
+                // Utelukk 'Her'
+                L.circle([lat, lon], { radius: 1000, color: 'red', fillColor: 'red', fillOpacity: 0.3 }).addTo(map);
+            } else if (proximity === '10') {
+                // Utelukk 'Veldig nær'
+                L.circle([lat, lon], { radius: 2000, color: 'red', fillColor: 'red', fillOpacity: 0.3 }).addTo(map);
+            } else if (proximity === '10+') {
+                // Utelukk 'Nær'
+                L.circle([lat, lon], { radius: 10000, color: 'red', fillColor: 'red', fillOpacity: 0.3 }).addTo(map);
+            }
+        }
+
+        function getRadiusForProximity(proximity) {
+            switch (proximity) {
+                case '1':
+                    return 1000; // 'Her'
+                case '2':
+                    return 2000; // 'Veldig nær'
+                case '10':
+                    return 10000; // 'Nær'
+                case '10+':
+                default:
+                    return 20000; // 'Langt unna'
+            }
+        }
+    </script>
+
+</body>
+
+</html>
